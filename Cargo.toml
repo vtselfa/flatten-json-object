@@ -7,7 +7,6 @@ repository = "https://github.com/durch/rust-flatten-json"
 documentation = "https://durch.github.io/rust-flatten-json/"
 license = "MIT"
 readme = "README.md"
-edition = "2018"
 keywords = ['json']
 
 [lib]
