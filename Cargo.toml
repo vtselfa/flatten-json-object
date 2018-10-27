@@ -1,0 +1,20 @@
+[package]
+name = "rust-flatten-json"
+version = "0.1.0"
+authors = ["Drazen Urch <drazen@urch.eu>"]
+description = "Tiny Rust library for flattening JSON and JSON type inference"
+repository = "https://github.com/durch/rust-flatten-json"
+documentation = "https://durch.github.io/rust-flatten-json/"
+license = "MIT"
+readme = "README.md"
+edition = "2018"
+keywords = ['json']
+
+[lib]
+name = "flatten_json"
+path = "src/lib.rs"
+
+[dependencies]
+serde_json = "^1.0"
+error-chain = "^0.12"
+log = "^0.4"
