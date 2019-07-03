@@ -18,5 +18,5 @@ rust-flatten-json = "0.1.0"
 
 #### Example
 
-Read `JSON` from `stdin` and output flat `JSON` to `stdout` -> [bin/from_stdin.rs](https://github.com/durch/rust-flatten-json/blob/master/src/bin/simple_crud.rs)
+Read `JSON` from `stdin` and output flat `JSON` to `stdout` -> [bin/from_stdin.rs](https://github.com/durch/rust-flatten-json/blob/master/src/bin/from_stdin.rs)
 
