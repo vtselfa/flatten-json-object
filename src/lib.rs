@@ -81,7 +81,7 @@ fn infer_type_and_insert(v: &Value, new_k: String, value: &mut Map<String, Value
 }
 
 fn flatten_array(flat_value: &mut Value, new_k: &str, v_array: &[Value], infer_type: bool) -> Result<()> {
-    for (i, obj) in v_array.into_iter().enumerate() {
+    for (i, obj) in v_array.iter().enumerate() {
         let array_key = format!("{}.{}", new_k, i);
         // if element is object or array recurse
         if obj.is_object() | obj.is_array() {
