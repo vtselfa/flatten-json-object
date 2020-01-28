@@ -42,7 +42,7 @@ fn main() {
 
 fn process_line(value: &Value) -> Result<()> {
     let mut flat_value: Value = json!({});
-    flatten(value, &mut flat_value, None, true)?;
+    flatten(value, &mut flat_value, None, true, None)?;
     io::stdout().write_all(serde_json::to_string(&flat_value)?.as_bytes())?;
     io::stdout().write_all(b"\n")?;
     Ok(())

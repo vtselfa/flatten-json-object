@@ -1,6 +1,6 @@
 [package]
 name = "rust-flatten-json"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Drazen Urch <drazen@urch.eu>"]
 description = "Tiny Rust library for flattening JSON and JSON type inference"
 repository = "https://github.com/durch/rust-flatten-json"
