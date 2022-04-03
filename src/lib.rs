@@ -5,8 +5,8 @@ extern crate error_chain;
 #[macro_use]
 extern crate log;
 
-use serde_json::value::Value;
 use serde_json::map::Map;
+use serde_json::value::Value;
 
 error_chain! {
 foreign_links {
@@ -14,12 +14,18 @@ foreign_links {
     }
 }
 
-pub fn flatten(nested_value: &Value, flat_value: &mut Value, parent_key: Option<String>, infer_type: bool, separator: Option<&str>) -> Result<()> {
+pub fn flatten(
+    nested_value: &Value,
+    flat_value: &mut Value,
+    parent_key: Option<String>,
+    infer_type: bool,
+    separator: Option<&str>,
+) -> Result<()> {
     // if object
     if let Some(nested_dict) = nested_value.as_object() {
         flatten_object(flat_value, &parent_key, nested_dict, infer_type, separator)?;
     } else if let Some(v_array) = nested_value.as_array() {
-        let new_k = parent_key.unwrap_or_else(||String::from(""));
+        let new_k = parent_key.unwrap_or_else(|| String::from(""));
         flatten_array(flat_value, &new_k, v_array, infer_type, separator)?;
     } else {
         error!("Expected object, found something else: {:?}", nested_value)
@@ -27,18 +33,19 @@ pub fn flatten(nested_value: &Value, flat_value: &mut Value, parent_key: Option<
     Ok(())
 }
 
-
-fn flatten_object(flat_value: &mut Value, parent_key: &Option<String>, nested_dict: &Map<String, Value>, infer_type: bool, separator: Option<&str>) -> Result<()> {
-    let sep = if let Some(sep) = separator {
-        sep
-    } else {
-        "."
-    };
+fn flatten_object(
+    flat_value: &mut Value,
+    parent_key: &Option<String>,
+    nested_dict: &Map<String, Value>,
+    infer_type: bool,
+    separator: Option<&str>,
+) -> Result<()> {
+    let sep = if let Some(sep) = separator { sep } else { "." };
 
     for (k, v) in nested_dict.iter() {
         let new_k = match parent_key {
             Some(ref key) => format!("{}{}{}", key, sep, k),
-            None => k.clone()
+            None => k.clone(),
         };
         // if nested value is object recurse with parent_key
         if let Some(obj) = v.as_object() {
@@ -51,7 +58,7 @@ fn flatten_object(flat_value: &mut Value, parent_key: &Option<String>, nested_di
                 flatten_array(flat_value, &new_k, v_array, infer_type, separator)?;
                 // if array is empty insert empty array into flat_value
             } else if let Some(value) = flat_value.as_object_mut() {
-                let empty: Vec<Value> = vec!();
+                let empty: Vec<Value> = vec![];
                 value.insert(k.to_string(), json!(empty));
             }
             // if no object or array insert value into the flat_value we're building
@@ -62,7 +69,12 @@ fn flatten_object(flat_value: &mut Value, parent_key: &Option<String>, nested_di
     Ok(())
 }
 
-fn infer_type_and_insert(v: &Value, new_k: String, value: &mut Map<String, Value>, infer_type: bool) -> Result<()> {
+fn infer_type_and_insert(
+    v: &Value,
+    new_k: String,
+    value: &mut Map<String, Value>,
+    infer_type: bool,
+) -> Result<()> {
     let new_val;
     if infer_type {
         if let Some(string) = v.as_str() {
@@ -72,9 +84,9 @@ fn infer_type_and_insert(v: &Value, new_k: String, value: &mut Map<String, Value
                     Ok(f) => serde_json::to_value(f)?,
                     Err(_) => match string.parse::<bool>() {
                         Ok(b) => serde_json::to_value(b)?,
-                        Err(_) => serde_json::to_value(string)?
-                    }
-                }
+                        Err(_) => serde_json::to_value(string)?,
+                    },
+                },
             };
         } else {
             new_val = v.clone();
@@ -86,7 +98,13 @@ fn infer_type_and_insert(v: &Value, new_k: String, value: &mut Map<String, Value
     Ok(())
 }
 
-fn flatten_array(flat_value: &mut Value, new_k: &str, v_array: &[Value], infer_type: bool, separator: Option<&str>) -> Result<()> {
+fn flatten_array(
+    flat_value: &mut Value,
+    new_k: &str,
+    v_array: &[Value],
+    infer_type: bool,
+    separator: Option<&str>,
+) -> Result<()> {
     for (i, obj) in v_array.iter().enumerate() {
         let array_key = format!("{}.{}", new_k, i);
         // if element is object or array recurse
@@ -173,9 +191,11 @@ mod tests {
 
         let mut flat = json!({});
         flatten(&obj, &mut flat, None, true, None).unwrap();
-        assert_eq!(json!({"key": "value", "nested_key.key": "value"}), json!(flat));
+        assert_eq!(
+            json!({"key": "value", "nested_key.key": "value"}),
+            json!(flat)
+        );
     }
-
 
     #[test]
     fn nested_multiple_key_value() {
@@ -183,7 +203,10 @@ mod tests {
 
         let mut flat = json!({});
         flatten(&obj, &mut flat, None, true, None).unwrap();
-        assert_eq!(json!({"key": "value", "nested_key.key1": "value1", "nested_key.key2": "value2"}), json!(flat));
+        assert_eq!(
+            json!({"key": "value", "nested_key.key1": "value1", "nested_key.key2": "value2"}),
+            json!(flat)
+        );
     }
 
     #[test]
@@ -210,7 +233,10 @@ mod tests {
 
         let mut flat = json!({});
         flatten(&obj, &mut flat, None, true, None).unwrap();
-        assert_eq!(json!({"key.0": "value1", "key.1.key": "value2"}), json!(flat));
+        assert_eq!(
+            json!({"key.0": "value1", "key.1.key": "value2"}),
+            json!(flat)
+        );
     }
 
     #[test]
@@ -219,7 +245,10 @@ mod tests {
 
         let mut flat = json!({});
         flatten(&obj, &mut flat, None, true, None).unwrap();
-        assert_eq!(json!({"simple_key": "simple_value", "key.0": "value1", "key.1.key": "value2", "key.2.nested_array.0": "nested1", "key.2.nested_array.1": "nested2", "key.2.nested_array.2.0": "nested3", "key.2.nested_array.2.1": "nested4"}), json!(flat));
+        assert_eq!(
+            json!({"simple_key": "simple_value", "key.0": "value1", "key.1.key": "value2", "key.2.nested_array.0": "nested1", "key.2.nested_array.1": "nested2", "key.2.nested_array.2.0": "nested3", "key.2.nested_array.2.1": "nested4"}),
+            json!(flat)
+        );
     }
 
     #[test]

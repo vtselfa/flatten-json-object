@@ -8,8 +8,8 @@ extern crate log;
 
 use serde_json::Value;
 
-use std::io::{self, Write};
 use flatten_json::flatten;
+use std::io::{self, Write};
 
 error_chain! {
 foreign_links {
