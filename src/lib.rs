@@ -34,7 +34,7 @@ fn flatten_object(flat_value: &mut Value, parent_key: &Option<String>, nested_di
     } else {
         "."
     };
-    
+
     for (k, v) in nested_dict.iter() {
         let new_k = match parent_key {
             Some(ref key) => format!("{}{}{}", key, sep, k),
@@ -220,5 +220,87 @@ mod tests {
         let mut flat = json!({});
         flatten(&obj, &mut flat, None, true, None).unwrap();
         assert_eq!(json!({"simple_key": "simple_value", "key.0": "value1", "key.1.key": "value2", "key.2.nested_array.0": "nested1", "key.2.nested_array.1": "nested2", "key.2.nested_array.2.0": "nested3", "key.2.nested_array.2.1": "nested4"}), json!(flat));
+    }
+
+    #[test]
+    fn overlapping_after_flattening_array() {
+        let obj = json!({"key": ["value1", "value2"], "key.0": "Oopsy"});
+
+        let mut flat = json!({});
+        let result = flatten(&obj, &mut flat, None, true, None).unwrap();
+        // assert!(!result.is_err(), "Flattening that JSON produces a collision so it should return Err")
+        assert_eq!(json!({"key.0": "value1", "key.1": "value2"}), json!(flat));
+    }
+
+    #[test]
+    fn empty_array() {
+        let obj = json!({"key": []});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({}), json!(flat));
+    }
+
+    #[test]
+    fn empty_object() {
+        let obj = json!({"key": {}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({}), json!(flat));
+    }
+
+    #[test]
+    fn empty_complex_object() {
+        let obj = json!({"key": {"key2": {}}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({}), json!(flat));
+    }
+
+    #[test]
+    fn object_with_empty_array() {
+        let obj = json!({"key": {"key2": []}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({}), json!(flat));
+    }
+
+    #[test]
+    fn object_with_empty_array_and_string() {
+        let obj = json!({"key": {"key2": [], "key3": "a"}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({"key.key3": "a"}), json!(flat));
+    }
+
+    #[test]
+    fn object_with_empty_object_and_string() {
+        let obj = json!({"key": {"key2": {}, "key3": "a"}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({"key.key3": "a"}), json!(flat));
+    }
+
+    #[test]
+    fn empty_string_as_key() {
+        let obj = json!({"key": {"": "a"}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({"key.": "a"}), json!(flat));
+    }
+
+    #[test]
+    fn empty_string_as_key_multiple_times() {
+        let obj = json!({"key": {"": {"": {"": "a"}}}});
+
+        let mut flat = json!({});
+        flatten(&obj, &mut flat, None, true, None).unwrap();
+        assert_eq!(json!({"key...": "a"}), json!(flat));
     }
 }
