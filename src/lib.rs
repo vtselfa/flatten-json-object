@@ -1,18 +1,7 @@
-#[macro_use]
-extern crate serde_json;
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate log;
-
 use serde_json::map::Map;
 use serde_json::value::Value;
 
-error_chain! {
-foreign_links {
-        Json(::serde_json::Error);
-    }
-}
+mod error;
 
 pub fn flatten(
     nested_value: &Value,
@@ -20,7 +9,7 @@ pub fn flatten(
     parent_key: Option<String>,
     infer_type: bool,
     separator: Option<&str>,
-) -> Result<()> {
+) -> Result<(), error::Error> {
     // if object
     if let Some(nested_dict) = nested_value.as_object() {
         flatten_object(flat_value, &parent_key, nested_dict, infer_type, separator)?;
@@ -28,7 +17,7 @@ pub fn flatten(
         let new_k = parent_key.unwrap_or_else(|| String::from(""));
         flatten_array(flat_value, &new_k, v_array, infer_type, separator)?;
     } else {
-        error!("Expected object, found something else: {:?}", nested_value)
+        log::error!("Expected object, found something else: {:?}", nested_value)
     }
     Ok(())
 }
@@ -39,7 +28,7 @@ fn flatten_object(
     nested_dict: &Map<String, Value>,
     infer_type: bool,
     separator: Option<&str>,
-) -> Result<()> {
+) -> Result<(), error::Error> {
     let sep = if let Some(sep) = separator { sep } else { "." };
 
     for (k, v) in nested_dict.iter() {
@@ -52,14 +41,10 @@ fn flatten_object(
             flatten_object(flat_value, &Some(new_k), obj, infer_type, separator)?;
             // if array
         } else if let Some(v_array) = v.as_array() {
-            // if array is not empty
+            // if array is not empty traverse array
+            // if array is empty do not inset anything
             if !v_array.is_empty() {
-                // traverse array
                 flatten_array(flat_value, &new_k, v_array, infer_type, separator)?;
-                // if array is empty insert empty array into flat_value
-            } else if let Some(value) = flat_value.as_object_mut() {
-                let empty: Vec<Value> = vec![];
-                value.insert(k.to_string(), json!(empty));
             }
             // if no object or array insert value into the flat_value we're building
         } else if let Some(value) = flat_value.as_object_mut() {
@@ -74,7 +59,7 @@ fn infer_type_and_insert(
     new_k: String,
     value: &mut Map<String, Value>,
     infer_type: bool,
-) -> Result<()> {
+) -> Result<(), error::Error> {
     let new_val;
     if infer_type {
         if let Some(string) = v.as_str() {
@@ -104,7 +89,7 @@ fn flatten_array(
     v_array: &[Value],
     infer_type: bool,
     separator: Option<&str>,
-) -> Result<()> {
+) -> Result<(), error::Error> {
     for (i, obj) in v_array.iter().enumerate() {
         let array_key = format!("{}.{}", new_k, i);
         // if element is object or array recurse
@@ -121,6 +106,7 @@ fn flatten_array(
 #[cfg(test)]
 mod tests {
     use super::flatten;
+    use serde_json::json;
 
     #[test]
     fn single_key_value() {
@@ -256,9 +242,11 @@ mod tests {
         let obj = json!({"key": ["value1", "value2"], "key.0": "Oopsy"});
 
         let mut flat = json!({});
-        let result = flatten(&obj, &mut flat, None, true, None).unwrap();
-        // assert!(!result.is_err(), "Flattening that JSON produces a collision so it should return Err")
-        assert_eq!(json!({"key.0": "value1", "key.1": "value2"}), json!(flat));
+        let result = flatten(&obj, &mut flat, None, true, None);
+        assert!(
+            result.is_err(),
+            "Flattening that JSON produces a collision so it should return Err"
+        )
     }
 
     #[test]
@@ -331,5 +319,18 @@ mod tests {
         let mut flat = json!({});
         flatten(&obj, &mut flat, None, true, None).unwrap();
         assert_eq!(json!({"key...": "a"}), json!(flat));
+    }
+
+    #[test]
+    fn flatten_plain_types() {
+        let integer = json!(3);
+        let string = json!("");
+        let boolean = json!(false);
+
+        for j in [integer, string, boolean] {
+            let mut flat = json!({});
+            flatten(&j, &mut flat, None, true, None).unwrap();
+            assert_eq!(j, json!(flat));
+        }
     }
 }

@@ -1,23 +1,7 @@
-extern crate flatten_json;
-#[macro_use]
-extern crate serde_json;
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate log;
-
-use serde_json::Value;
-
 use flatten_json::flatten;
+use log::{error, info};
+use serde_json::Value;
 use std::io::{self, Write};
-
-error_chain! {
-foreign_links {
-        Json(::serde_json::Error);
-        Io(::std::io::Error);
-        Flatten(::flatten_json::Error);
-    }
-}
 
 fn main() {
     let mut input = String::new();
@@ -40,8 +24,8 @@ fn main() {
     }
 }
 
-fn process_line(value: &Value) -> Result<()> {
-    let mut flat_value: Value = json!({});
+fn process_line(value: &Value) -> Result<(), anyhow::Error> {
+    let mut flat_value: Value = serde_json::json!({});
     flatten(value, &mut flat_value, None, true, None)?;
     io::stdout().write_all(serde_json::to_string(&flat_value)?.as_bytes())?;
     io::stdout().write_all(b"\n")?;
