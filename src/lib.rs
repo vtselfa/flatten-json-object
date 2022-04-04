@@ -1,20 +1,26 @@
+//! Tiny Rust library for flattening JSON objects
+
 use serde_json::value::Map;
 use serde_json::value::Value;
 
 mod error;
 
-pub fn flatten(
-    to_flatten: &Value, // The part of the json that we are iterating
-) -> Result<Value, error::Error> {
+/// Flattens the provided JSON object (`current`).
+///
+/// It will return an error if flattening the object would make two keys to be the same,
+/// overwriting a value. It will alre return an error if the JSON value passed it's not an object.
+pub fn flatten(to_flatten: &Value) -> Result<Value, error::Error> {
     let mut flat = Map::<String, Value>::new();
     flatten_value(to_flatten, "".to_owned(), 0, &mut flat).map(|_x| Value::Object(flat))
 }
 
+/// Flattens the passed JSON value (`current`), whose path is `parent_key` and its 0-based depth is `depth`.
+/// The result is stored in the JSON object `flattened`.
 fn flatten_value(
-    current: &Value,                    // The part of the json that we are iterating
-    parent_key: String, // The concatenated keys of the ancestors of the current value
-    depth: u32,         // The depth were we are, starting from 0
-    flattened: &mut Map<String, Value>, // Were we accumulate the resulting flattened json
+    current: &Value,
+    parent_key: String,
+    depth: u32,
+    flattened: &mut Map<String, Value>,
 ) -> Result<(), error::Error> {
     if depth == 0 && !current.is_object() {
         return Err(error::Error::FirstLevelMustBeAnObject);
@@ -33,10 +39,12 @@ fn flatten_value(
     Ok(())
 }
 
+/// Flattens the passed object (`current`), whose path is `parent_key` and its 0-based depth is `depth`.
+/// The result is stored in the JSON object `flattened`.
 fn flatten_object(
     current: &Map<String, Value>,
-    parent_key: String, // The concatenated keys of the ancestors of the current value
-    depth: u32,         // The depth were we are, starting from 0
+    parent_key: String,
+    depth: u32,
     flattened: &mut Map<String, Value>, // Were we accumulate the resulting flattened json
 ) -> Result<(), error::Error> {
     for (k, v) in current.iter() {
@@ -50,10 +58,12 @@ fn flatten_object(
     Ok(())
 }
 
+/// Flattens the passed array (`current`), whose path is `parent_key` and its 0-based depth is `depth`.
+/// The result is stored in the JSON object `flattened`.
 fn flatten_array(
     current: &[Value],
-    parent_key: String, // The concatenated keys of the ancestors of the current value
-    depth: u32,         // The depth were we are, starting from 0
+    parent_key: String,
+    depth: u32,
     flattened: &mut Map<String, Value>, // Were we accumulate the resulting flattened json
 ) -> Result<(), error::Error> {
     for (i, obj) in current.iter().enumerate() {
