@@ -1,26 +1,25 @@
 [package]
-name = "rust-flatten-json"
-version = "0.2.0"
+name = "flatten-json-object"
+version = "0.1.0"
 edition = "2021"
-authors = ["Drazen Urch <drazen@urch.eu>"]
-description = "Tiny Rust library for flattening JSON and JSON type inference"
-repository = "https://github.com/durch/rust-flatten-json"
-documentation = "https://durch.github.io/rust-flatten-json/"
+authors = ["Vicent Selfa <vtselfa@gmail.com>"]
+description = "Tiny Rust library for flattening JSON objects"
+repository = "https://github.com/vtselfa/flatten-json-object"
 license = "MIT"
 readme = "README.md"
-keywords = ['json']
+keywords = ['json', 'flatten']
 
 [lib]
-name = "flatten_json"
+name = "flatten_json_object"
 path = "src/lib.rs"
 
 [dependencies]
-log = "0.4.16"
 serde_json = "1.0.79"
 thiserror = "1.0.30"
 
 [dev-dependencies]
 anyhow = "1.0.56"
+log = "0.4.16"
 
 [[example]]
 name = "from_stdin"

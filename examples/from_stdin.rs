@@ -1,4 +1,4 @@
-use flatten_json::flatten;
+use flatten_json_object::flatten;
 use log::{error, info};
 use serde_json::Value;
 use std::io::{self, Write};
@@ -25,8 +25,7 @@ fn main() {
 }
 
 fn process_line(value: &Value) -> Result<(), anyhow::Error> {
-    let mut flat_value: Value = serde_json::json!({});
-    flatten(value, &mut flat_value, None, true, None)?;
+    let flat_value = flatten(value)?;
     io::stdout().write_all(serde_json::to_string(&flat_value)?.as_bytes())?;
     io::stdout().write_all(b"\n")?;
     Ok(())
