@@ -5,10 +5,10 @@
 //! formatted can be configured.
 //!
 //! ### Notes
-//! - Empty arrays and objects are ignored. The empty key `""` and the JSON `null` value can
-//!   be used without problems and are preserved.
+//! - Empty arrays and objects are ignored by default, but it's configurable.
+//! - The empty key `""` and the JSON `null` value can be used without problems and are preserved.
 //! - Having two or more keys that end being the same after flattening the object returns an error.
-//! - The JSON value passed to be flattened must be an object. It can contain any valid JSON,
+//! - The JSON value passed to be flattened must be an object. The object can contain any valid JSON,
 //!   though.
 //!
 //! ### Usage example
@@ -35,6 +35,8 @@
 //!             start: "[".to_string(),
 //!             end: "]".to_string()
 //!         })
+//!         .set_preserve_empty_arrays(false)
+//!         .set_preserve_empty_objects(false)
 //!         .flatten(&obj)?,
 //!     json!({
 //!         "a.b[0]": 1,
@@ -54,7 +56,7 @@
 use serde_json::value::Map;
 use serde_json::value::Value;
 
-mod error;
+pub mod error;
 
 /// Enum to specify how arrays are formatted.
 pub enum ArrayFormatting {
@@ -70,8 +72,14 @@ pub enum ArrayFormatting {
 /// Basic struct of this crate. It contains the configuration. Instantiate it and use the method
 /// `flatten` to flatten a JSON object.
 pub struct Flattener {
+    /// String used to separate the keys after the object it's flattened
     key_separator: String,
+    /// Enum that indicates how arrays are formatted
     array_formatting: ArrayFormatting,
+    /// If `true` all `[]` are preserved
+    preserve_empty_arrays: bool,
+    /// If `true` all `{}` are preserved
+    preserve_empty_objects: bool,
 }
 
 impl Default for Flattener {
@@ -86,6 +94,8 @@ impl Flattener {
         Flattener {
             array_formatting: ArrayFormatting::Plain,
             key_separator: ".".to_string(),
+            preserve_empty_arrays: false,
+            preserve_empty_objects: false,
         }
     }
 
@@ -99,6 +109,18 @@ impl Flattener {
     /// normal key, but with this function we can change this behaviour.
     pub fn set_array_formatting(mut self, array_formatting: ArrayFormatting) -> Self {
         self.array_formatting = array_formatting;
+        self
+    }
+
+    /// Changes the behaviour regarding empty arrays `[]`
+    pub fn set_preserve_empty_arrays(mut self, value: bool) -> Self {
+        self.preserve_empty_arrays = value;
+        self
+    }
+
+    /// Changes the behaviour regarding empty objects `{}`
+    pub fn set_preserve_empty_objects(mut self, value: bool) -> Self {
+        self.preserve_empty_objects = value;
         self
     }
 
@@ -126,9 +148,17 @@ impl Flattener {
         }
 
         if let Some(current) = current.as_object() {
-            self.flatten_object(current, parent_key, depth, flattened)?;
+            if current.is_empty() && self.preserve_empty_objects {
+                flattened.insert(parent_key, serde_json::json!({}));
+            } else {
+                self.flatten_object(current, parent_key, depth, flattened)?;
+            }
         } else if let Some(current) = current.as_array() {
-            self.flatten_array(current, parent_key, depth, flattened)?;
+            if current.is_empty() && self.preserve_empty_arrays {
+                flattened.insert(parent_key, serde_json::json!([]));
+            } else {
+                self.flatten_array(current, parent_key, depth, flattened)?;
+            }
         } else {
             if flattened.contains_key(&parent_key) {
                 return Err(error::Error::KeyWillBeOverwritten(parent_key));
@@ -330,6 +360,58 @@ mod tests {
     fn empty_complex_object() {
         let obj = json!({"key": {"key2": {}, "key3": [[], {}, {"k": {}, "q": []}]}});
         assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({}));
+    }
+
+    /// Ensure that empty arrays are preserved if so configured
+    #[test]
+    fn empty_array_preserved() {
+        let obj = json!({"key": [], "a": {}});
+        assert_eq!(
+            Flattener::new()
+                .set_preserve_empty_arrays(true)
+                .flatten(&obj)
+                .unwrap(),
+            json!({"key": []})
+        );
+    }
+
+    /// Ensure that empty objects are preserved if so configured
+    #[test]
+    fn empty_object_preserved() {
+        let obj = json!({"key": {}, "a": []});
+        assert_eq!(
+            Flattener::new()
+                .set_preserve_empty_objects(true)
+                .flatten(&obj)
+                .unwrap(),
+            json!({"key": {}})
+        );
+    }
+
+    /// Ensure that all the end values of the JSON object that are either `[]` or `{}` are preserved
+    /// if so configured
+    #[test]
+    fn empty_objects_and_arrays_preserved() {
+        let obj = json!({
+            "key": {
+                "key2": {},
+                "key3": [[], {}, {"k": {}, "q": []}]
+            }
+        });
+        assert_eq!(
+            Flattener::new()
+                .set_preserve_empty_arrays(true)
+                .set_preserve_empty_objects(true)
+                .flatten(&obj)
+                .unwrap(),
+            json!({
+                "key.key2": {},
+                "key.key3.0": [],
+                "key.key3.1": {},
+                "key.key3.2.k": {},
+                "key.key3.2.q": [],
+            })
+        );
     }
 
     #[test]

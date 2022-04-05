@@ -6,10 +6,10 @@ The string used to separate the concatenated keys, and the way the arrays are
 formatted can be configured.
 
 ### Notes
-- Empty arrays and objects are ignored. The empty key `""` and the JSON `null` value can
-  be used without problems and are preserved.
+- Empty arrays and objects are ignored by default, but it's configurable.
+- The empty key `""` and the JSON `null` value can be used without problems and are preserved.
 - Having two or more keys that end being the same after flattening the object returns an error.
-- The JSON value passed to be flattened must be an object. It can contain any valid JSON,
+- The JSON value passed to be flattened must be an object. The object can contain any valid JSON,
   though.
 
 ### Usage
@@ -41,6 +41,8 @@ assert_eq!(
             start: "[".to_string(),
             end: "]".to_string()
         })
+        .set_preserve_empty_arrays(false)
+        .set_preserve_empty_objects(false)
         .flatten(&obj)?,
     json!({
         "a.b[0]": 1,
