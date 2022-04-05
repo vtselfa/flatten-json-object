@@ -68,6 +68,12 @@ pub struct Flattener {
     array_formatting: ArrayFormatting,
 }
 
+impl Default for Flattener {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Flattener {
     /// Creates a JSON object flattener with the default configuration.
     pub fn new() -> Self {
@@ -146,20 +152,22 @@ impl Flattener {
         Ok(())
     }
 
-    /// Flattens the passed array (`current`), whose path is `parent_key` and its 0-based depth is `depth`.
-    /// The result is stored in the JSON object `flattened`.
+    /// Flattens the passed array (`current`), whose path is `parent_key` and its 0-based depth
+    /// is `depth`.  The result is stored in the JSON object `flattened`.
     fn flatten_array(
         &self,
         current: &[Value],
         parent_key: String,
         depth: u32,
-        flattened: &mut Map<String, Value>, // Were we accumulate the resulting flattened json
+        flattened: &mut Map<String, Value>,
     ) -> Result<(), error::Error> {
         for (i, obj) in current.iter().enumerate() {
             let parent_key = if depth > 0 {
                 match self.array_formatting {
                     ArrayFormatting::Plain => format!("{}{}{}", parent_key, self.key_separator, i),
-                    ArrayFormatting::Surrounded { ref start, ref end } => format!("{}{}{}{}", parent_key, start, i, end),
+                    ArrayFormatting::Surrounded { ref start, ref end } => {
+                        format!("{}{}{}{}", parent_key, start, i, end)
+                    }
                 }
             } else {
                 format!("{}", i)
@@ -172,35 +180,76 @@ impl Flattener {
 
 #[cfg(test)]
 mod tests {
+    use super::ArrayFormatting;
     use super::Flattener;
     use crate::error::Error;
+    use rstest::rstest;
     use serde_json::json;
 
-    #[test]
-    fn single_key_value() {
-        let obj = json!({"key": "value"});
-        assert_eq!(obj, Flattener::new().flatten(&obj).unwrap());
-    }
-
-    #[test]
-    fn object_with_plain_values() {
+    #[rstest]
+    #[case("")]
+    #[case(".")]
+    #[case("-->")]
+    fn object_with_plain_values(#[case] key_separator: &str) {
         let obj = json!({"int": 1, "float": 2.0, "str": "a", "bool": true, "null": null});
-        assert_eq!(obj, Flattener::new().flatten(&obj).unwrap());
-    }
-
-    #[test]
-    fn array_with_plain_values() {
-        let obj = json!({"a": [1, 2.0, "b", null, true]});
         assert_eq!(
-            Flattener::new().flatten(&obj).unwrap(),
-            json!({"a.0": 1, "a.1": 2.0, "a.2": "b", "a.3": null, "a.4": true})
+            obj,
+            Flattener::new()
+                .set_key_separator(key_separator)
+                .flatten(&obj)
+                .unwrap()
         );
     }
 
-    #[test]
-    fn multi_key_value() {
-        let obj = json!({"key1": "value1", "key2": "value2"});
-        assert_eq!(obj, Flattener::new().flatten(&obj).unwrap());
+    /// Ensures that when using `ArrayFormatting::Plain` both arrays and objects are formatted
+    /// properly.
+    #[rstest]
+    #[case("")]
+    #[case(".")]
+    #[case("aaa")]
+    fn array_formatting_plain(#[case] key_separator: &str) {
+        let obj = json!({"s": {"a": [1, 2.0, "b", null, true]}});
+        assert_eq!(
+            Flattener::new()
+                .set_key_separator(key_separator)
+                .flatten(&obj)
+                .unwrap(),
+            json!({
+                format!("s{k}a{k}0", k = key_separator): 1,
+                format!("s{k}a{k}1", k = key_separator): 2.0,
+                format!("s{k}a{k}2", k = key_separator): "b",
+                format!("s{k}a{k}3", k = key_separator): null,
+                format!("s{k}a{k}4", k = key_separator): true,
+            })
+        );
+    }
+
+    /// Ensures that when using `ArrayFormatting::Surrounded` both the array start and end
+    /// decorations and the key separator work as expected.
+    #[rstest]
+    fn array_formatting_surrouded(
+        #[values("", ".", "-->")] key_separator: &str,
+        #[values("", "[", "{{")] array_fmt_start: &str,
+        #[values("", "]", "}}")] array_fmt_end: &str,
+    ) {
+        let obj = json!({"s": {"a": [1, 2.0, "b", null, true]}});
+        assert_eq!(
+            Flattener::new()
+                .set_key_separator(key_separator)
+                .set_array_formatting(ArrayFormatting::Surrounded {
+                    start: array_fmt_start.to_string(),
+                    end: array_fmt_end.to_string()
+                })
+                .flatten(&obj)
+                .unwrap(),
+            json!({
+                format!("s{}a{}0{}", key_separator, array_fmt_start, array_fmt_end): 1,
+                format!("s{}a{}1{}", key_separator, array_fmt_start, array_fmt_end): 2.0,
+                format!("s{}a{}2{}", key_separator, array_fmt_start, array_fmt_end): "b",
+                format!("s{}a{}3{}", key_separator, array_fmt_start, array_fmt_end): null,
+                format!("s{}a{}4{}", key_separator, array_fmt_start, array_fmt_end): true,
+            })
+        );
     }
 
     #[test]
@@ -218,15 +267,6 @@ mod tests {
         assert_eq!(
             Flattener::new().flatten(&obj).unwrap(),
             json!({"key": "value", "nested_key.key1": "value1", "nested_key.key2": "value2"}),
-        );
-    }
-
-    #[test]
-    fn nested_obj_array() {
-        let obj = json!({"key": ["value1", {"key": "value2"}]});
-        assert_eq!(
-            Flattener::new().flatten(&obj).unwrap(),
-            json!({"key.0": "value1", "key.1.key": "value2"}),
         );
     }
 
@@ -282,38 +322,44 @@ mod tests {
     /// resulting object it's empty.
     #[test]
     fn empty_complex_object() {
-        let obj = json!({"key": {"key2": {}}});
-        assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({}));
-    }
-
-    #[test]
-    fn nested_object_with_only_empty_array() {
-        let obj = json!({"key": {"key2": []}});
+        let obj = json!({"key": {"key2": {}, "key3": [[], {}, {"k": {}, "q": []}]}});
         assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({}));
     }
 
     #[test]
     fn nested_object_with_empty_array_and_string() {
         let obj = json!({"key": {"key2": [], "key3": "a"}});
-        assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({"key.key3": "a"}));
+        assert_eq!(
+            Flattener::new().flatten(&obj).unwrap(),
+            json!({"key.key3": "a"})
+        );
     }
 
     #[test]
     fn nested_object_with_empty_object_and_string() {
         let obj = json!({"key": {"key2": {}, "key3": "a"}});
-        assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({"key.key3": "a"}));
+        assert_eq!(
+            Flattener::new().flatten(&obj).unwrap(),
+            json!({"key.key3": "a"})
+        );
     }
 
     #[test]
     fn empty_string_as_key() {
         let obj = json!({"key": {"": "a"}});
-        assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({"key.": "a"}));
+        assert_eq!(
+            Flattener::new().flatten(&obj).unwrap(),
+            json!({"key.": "a"})
+        );
     }
 
     #[test]
     fn empty_string_as_key_multiple_times() {
         let obj = json!({"key": {"": {"": {"": "a"}}}});
-        assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({"key...": "a"}));
+        assert_eq!(
+            Flattener::new().flatten(&obj).unwrap(),
+            json!({"key...": "a"})
+        );
     }
 
     /// Flattening only makes sense for objects. Passing something else must return an informative
@@ -327,7 +373,12 @@ mod tests {
         let array = json!([1, 2, 3]);
 
         for j in [integer, string, boolean, null, array] {
-            assert!(Flattener::new().flatten(&j).is_err());
+            let res = Flattener::new().flatten(&j);
+            match res {
+                Err(Error::FirstLevelMustBeAnObject) => return, // Good
+                Ok(_) => assert!(false, "This should have failed"),
+                _ => assert!(false, "Wrong kind of error"),
+            }
         }
     }
 
