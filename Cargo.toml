@@ -1,6 +1,6 @@
 [package]
 name = "flatten-json-object"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 authors = ["Vicent Selfa <vtselfa@gmail.com>"]
 description = "Tiny Rust library for flattening JSON objects"
@@ -8,7 +8,7 @@ repository = "https://github.com/vtselfa/flatten-json-object"
 license = "MIT"
 readme = "README.md"
 keywords = ["json", "flatten", "flattening", "object"]
-categories = ["json"]
+categories = ["encoding"]
 
 [dependencies]
 serde_json = "1.0.79"
