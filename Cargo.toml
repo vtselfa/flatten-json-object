@@ -7,11 +7,8 @@ description = "Tiny Rust library for flattening JSON objects"
 repository = "https://github.com/vtselfa/flatten-json-object"
 license = "MIT"
 readme = "README.md"
-keywords = ['json', 'flatten']
-
-[lib]
-name = "flatten_json_object"
-path = "src/lib.rs"
+keywords = ["json", "flatten", "flattening", "object"]
+categories = ["json"]
 
 [dependencies]
 serde_json = "1.0.79"
