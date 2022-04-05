@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// Errors that can happen while using this crate.
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Only objects can be flattened")]

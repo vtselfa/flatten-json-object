@@ -1,26 +1,75 @@
 //! Tiny Rust library for flattening JSON objects
+//!
+//! Given a JSON object it produces another one with all the nested objects and arrays flattened.
+//! The string used to separate the concatenated keys, and the way the arrays are
+//! formatted can be configured.
+//!
+//! ### Notes
+//! - Empty arrays and objects will get ignored. The empty key `""` and the JSON `null` value can
+//!   be used without problems and will be preserved.
+//! - Having two or more keys that end being the same after flattening the object returns an error.
+//! - The JSON value passed to be flattened must be an object. It can contain any valid JSON,
+//!   though.
+//!
+//! ### Usage example
+//! ```
+//!     use flatten_json_object::ArrayFormatting;
+//!     use flatten_json_object::Flattener;
+//!     use serde_json::json;
+//!
+//!     let obj = json!({
+//!         "a": {
+//!             "b": [1, 2.0, "c", null, true, {}, []],
+//!             "" : "my_key_is_empty"
+//!         },
+//!         "" : "my_key_is_also_empty"
+//!     });
+//!     assert_eq!(
+//!         Flattener::new()
+//!             .set_key_separator(".")
+//!             .set_array_formatting(ArrayFormatting::Surrounded {
+//!                 start: "[".to_string(),
+//!                 end: "]".to_string()
+//!             })
+//!             .flatten(&obj)
+//!             .unwrap(),
+//!         json!({
+//!             "a.b[0]": 1,
+//!             "a.b[1]": 2.0,
+//!             "a.b[2]": "c",
+//!             "a.b[3]": null,
+//!             "a.b[4]": true,
+//!             "a.": "my_key_is_empty",
+//!             "": "my_key_is_also_empty",
+//!         })
+//!     );
+//! ```
 
 use serde_json::value::Map;
 use serde_json::value::Value;
 
 mod error;
 
+/// Enum to specify how arrays are formatted.
 pub enum ArrayFormatting {
-    /// Uses only the key separator. Example:  {"a": ["b"]} => {"a.0": "b"}
+    /// Uses only the key separator. Example:  `{"a": ["b"]}` => `{"a.0": "b"}`
     Plain,
 
-    /// Does not use the key sepparator. Instead, the position in the array is surrounded with the provided `start` and `end` strings.
-    /// Example: If `start` is "[" and `end` is "]" then {"a": ["b"]} => {"a[0]": "b"}
+    /// Does not use the key separator. Instead, the position in the array is surrounded with the
+    /// provided `start` and `end` strings.
+    /// Example: If `start` is `[` and `end` is `]` then `{"a": ["b"]}` => `{"a[0]": "b"}`
     Surrounded { start: String, end: String },
 }
 
+/// Basic struct of this crate. It contains the configuration. Instantiate it and use the method
+/// `flatten` to flatten a JSON object.
 pub struct Flattener {
     key_separator: String,
     array_formatting: ArrayFormatting,
 }
 
 impl Flattener {
-    /// Creates a JSON object flattener with the dafault configuration.
+    /// Creates a JSON object flattener with the default configuration.
     pub fn new() -> Self {
         Flattener {
             array_formatting: ArrayFormatting::Plain,
@@ -35,7 +84,7 @@ impl Flattener {
     }
 
     /// Changes the way arrays are formatted. By default the position in the array is treated as a
-    /// normal key, but with this fuction we can change this behaviour.
+    /// normal key, but with this function we can change this behaviour.
     pub fn set_array_formatting(mut self, array_formatting: ArrayFormatting) -> Self {
         self.array_formatting = array_formatting;
         self
@@ -51,8 +100,8 @@ impl Flattener {
             .map(|_x| Value::Object(flat))
     }
 
-    /// Flattens the passed JSON value (`current`), whose path is `parent_key` and its 0-based depth is `depth`.
-    /// The result is stored in the JSON object `flattened`.
+    /// Flattens the passed JSON value (`current`), whose path is `parent_key` and its 0-based
+    /// depth is `depth`.  The result is stored in the JSON object `flattened`.
     fn flatten_value(
         &self,
         current: &Value,
@@ -77,14 +126,14 @@ impl Flattener {
         Ok(())
     }
 
-    /// Flattens the passed object (`current`), whose path is `parent_key` and its 0-based depth is `depth`.
-    /// The result is stored in the JSON object `flattened`.
+    /// Flattens the passed object (`current`), whose path is `parent_key` and its 0-based depth
+    /// is `depth`.  The result is stored in the JSON object `flattened`.
     fn flatten_object(
         &self,
         current: &Map<String, Value>,
         parent_key: String,
         depth: u32,
-        flattened: &mut Map<String, Value>, // Were we accumulate the resulting flattened json
+        flattened: &mut Map<String, Value>,
     ) -> Result<(), error::Error> {
         for (k, v) in current.iter() {
             let parent_key = if depth > 0 {
@@ -215,18 +264,22 @@ mod tests {
         }
     }
 
+    /// Ensure that empty arrays are not present in the result
     #[test]
     fn empty_array() {
         let obj = json!({"key": []});
         assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({}));
     }
 
+    /// Ensure that empty objects are not present in the result
     #[test]
     fn empty_object() {
         let obj = json!({"key": {}});
         assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({}));
     }
 
+    /// Ensure that if all the end values of the JSON object are either `[]` or `{}` the flattened
+    /// resulting object it's empty.
     #[test]
     fn empty_complex_object() {
         let obj = json!({"key": {"key2": {}}});
@@ -263,6 +316,8 @@ mod tests {
         assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({"key...": "a"}));
     }
 
+    /// Flattening only makes sense for objects. Passing something else must return an informative
+    /// error.
     #[test]
     fn first_level_must_be_an_object() {
         let integer = json!(3);
