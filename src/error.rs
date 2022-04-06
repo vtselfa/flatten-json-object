@@ -8,7 +8,4 @@ pub enum Error {
 
     #[error("Flattening the object will overwrite the key '{0}'")]
     KeyWillBeOverwritten(String),
-
-    #[error(transparent)]
-    SerdeJson(#[from] serde_json::Error),
 }

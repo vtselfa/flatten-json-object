@@ -90,6 +90,7 @@ impl Default for Flattener {
 
 impl Flattener {
     /// Creates a JSON object flattener with the default configuration.
+    #[must_use]
     pub fn new() -> Self {
         Flattener {
             array_formatting: ArrayFormatting::Plain,
@@ -100,6 +101,7 @@ impl Flattener {
     }
 
     /// Changes the string used to separate keys in the resulting flattened object.
+    #[must_use]
     pub fn set_key_separator(mut self, key_separator: &str) -> Self {
         self.key_separator = key_separator.to_string();
         self
@@ -107,18 +109,21 @@ impl Flattener {
 
     /// Changes the way arrays are formatted. By default the position in the array is treated as a
     /// normal key, but with this function we can change this behaviour.
+    #[must_use]
     pub fn set_array_formatting(mut self, array_formatting: ArrayFormatting) -> Self {
         self.array_formatting = array_formatting;
         self
     }
 
     /// Changes the behaviour regarding empty arrays `[]`
+    #[must_use]
     pub fn set_preserve_empty_arrays(mut self, value: bool) -> Self {
         self.preserve_empty_arrays = value;
         self
     }
 
     /// Changes the behaviour regarding empty objects `{}`
+    #[must_use]
     pub fn set_preserve_empty_objects(mut self, value: bool) -> Self {
         self.preserve_empty_objects = value;
         self
@@ -128,6 +133,10 @@ impl Flattener {
     ///
     /// It will return an error if flattening the object would make two keys to be the same,
     /// overwriting a value. It will alre return an error if the JSON value passed it's not an object.
+    ///
+    /// # Errors
+    /// Will return `Err` if `to_flatten` it's not an object, or if flattening the object would
+    /// result in two or more keys colliding.
     pub fn flatten(&self, to_flatten: &Value) -> Result<Value, error::Error> {
         let mut flat = Map::<String, Value>::new();
         self.flatten_value(to_flatten, "".to_owned(), 0, &mut flat)
@@ -151,13 +160,13 @@ impl Flattener {
             if current.is_empty() && self.preserve_empty_objects {
                 flattened.insert(parent_key, serde_json::json!({}));
             } else {
-                self.flatten_object(current, parent_key, depth, flattened)?;
+                self.flatten_object(current, &parent_key, depth, flattened)?;
             }
         } else if let Some(current) = current.as_array() {
             if current.is_empty() && self.preserve_empty_arrays {
                 flattened.insert(parent_key, serde_json::json!([]));
             } else {
-                self.flatten_array(current, parent_key, depth, flattened)?;
+                self.flatten_array(current, &parent_key, depth, flattened)?;
             }
         } else {
             if flattened.contains_key(&parent_key) {
@@ -173,7 +182,7 @@ impl Flattener {
     fn flatten_object(
         &self,
         current: &Map<String, Value>,
-        parent_key: String,
+        parent_key: &str,
         depth: u32,
         flattened: &mut Map<String, Value>,
     ) -> Result<(), error::Error> {
@@ -193,7 +202,7 @@ impl Flattener {
     fn flatten_array(
         &self,
         current: &[Value],
-        parent_key: String,
+        parent_key: &str,
         depth: u32,
         flattened: &mut Map<String, Value>,
     ) -> Result<(), error::Error> {
@@ -335,8 +344,8 @@ mod tests {
         assert!(res.is_err());
         match res {
             Err(Error::KeyWillBeOverwritten(key)) => assert_eq!(key, "key.0"),
-            Ok(_) => assert!(false, "This should have failed"),
-            _ => assert!(false, "Wrong kind of error"),
+            Ok(_) => panic!("This should have failed"),
+            _ => panic!("Wrong kind of error"),
         }
     }
 
@@ -464,8 +473,8 @@ mod tests {
             let res = Flattener::new().flatten(&j);
             match res {
                 Err(Error::FirstLevelMustBeAnObject) => return, // Good
-                Ok(_) => assert!(false, "This should have failed"),
-                _ => assert!(false, "Wrong kind of error"),
+                Ok(_) => panic!("This should have failed"),
+                _ => panic!("Wrong kind of error"),
             }
         }
     }
