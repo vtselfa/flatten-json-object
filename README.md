@@ -1,4 +1,7 @@
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vtselfa/flatten-json-object/blob/master/LICENSE.md)
+[![licence](https://img.shields.io/crates/l/flatten-json-object?style=flat-square)](https://github.com/vtselfa/flatten-json-object/blob/master/LICENSE.md)
+[![crates.io](https://img.shields.io/crates/v/flatten-json-object?style=flat-square)](https://crates.io/crates/flatten-json-object)
+[![docs.rs](https://img.shields.io/docsrs/flatten-json-object?style=flat-square)](https://docs.rs/flatten-json-object/latest/flatten_json_object/)
+
 ## Tiny Rust library for flattening JSON objects
 
 Given a JSON object it produces another one with all the nested objects and arrays flattened.
@@ -6,6 +9,7 @@ The string used to separate the concatenated keys, and the way the arrays are
 formatted can be configured.
 
 ### Notes
+
 - Empty arrays and objects are ignored by default, but it's configurable.
 - The empty key `""` and the JSON `null` value can be used without problems and are preserved.
 - Having two or more keys that end being the same after flattening the object returns an error.
@@ -18,10 +22,11 @@ formatted can be configured.
 
 ```
 [dependencies]
-flatten-json-object = "0.1.0"
+flatten-json-object = "0.3.0"
 ```
 
 ### Example
+
 ```rust
 use flatten_json_object::ArrayFormatting;
 use flatten_json_object::Flattener;
