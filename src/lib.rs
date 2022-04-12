@@ -129,6 +129,26 @@ impl Flattener {
         self
     }
 
+    #[must_use]
+    pub fn key_separator(&self) -> &str {
+        &self.key_separator
+    }
+
+    #[must_use]
+    pub fn array_formatting(&self) -> &ArrayFormatting {
+        &self.array_formatting
+    }
+
+    #[must_use]
+    pub fn preserve_empty_arrays(&self) -> bool {
+        self.preserve_empty_arrays
+    }
+
+    #[must_use]
+    pub fn preserve_empty_objects(&self) -> bool {
+        self.preserve_empty_objects
+    }
+
     /// Flattens the provided JSON object (`current`).
     ///
     /// It will return an error if flattening the object would make two keys to be the same,
