@@ -61,6 +61,7 @@ pub use error::Error;
 pub mod error;
 
 /// Enum to specify how arrays are formatted.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArrayFormatting {
     /// Uses only the key separator. Example:  `{"a": ["b"]}` => `{"a.0": "b"}`
     Plain,
@@ -73,6 +74,7 @@ pub enum ArrayFormatting {
 
 /// Basic struct of this crate. It contains the configuration. Instantiate it and use the method
 /// `flatten` to flatten a JSON object.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Flattener {
     /// String used to separate the keys after the object it's flattened
     key_separator: String,
