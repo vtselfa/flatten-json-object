@@ -56,6 +56,8 @@
 use serde_json::value::Map;
 use serde_json::value::Value;
 
+pub use error::Error;
+
 pub mod error;
 
 /// Enum to specify how arrays are formatted.
