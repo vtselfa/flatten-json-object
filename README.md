@@ -22,7 +22,7 @@ formatted can be configured.
 
 ```
 [dependencies]
-flatten-json-object = "0.4.0"
+flatten-json-object = "0.5.0"
 ```
 
 ### Example

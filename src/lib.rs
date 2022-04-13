@@ -176,8 +176,15 @@ impl Flattener {
         depth: u32,
         flattened: &mut Map<String, Value>,
     ) -> Result<(), error::Error> {
-        if depth == 0 && !current.is_object() {
-            return Err(error::Error::FirstLevelMustBeAnObject);
+        if depth == 0 {
+            match current {
+                Value::Object(map) => {
+                    if map.is_empty() {
+                        return Ok(()); // If the top level input object is empty there is nothing to do
+                    }
+                }
+                _ => return Err(error::Error::FirstLevelMustBeAnObject),
+            }
         }
 
         if let Some(current) = current.as_object() {
@@ -385,6 +392,18 @@ mod tests {
     fn empty_object() {
         let obj = json!({"key": {}});
         assert_eq!(Flattener::new().flatten(&obj).unwrap(), json!({}));
+    }
+
+    #[rstest]
+    fn empty_top_object(#[values(true, false)] preserve_empty_objects: bool) {
+        let obj = json!({});
+        assert_eq!(
+            Flattener::new()
+                .set_preserve_empty_objects(preserve_empty_objects)
+                .flatten(&obj)
+                .unwrap(),
+            json!({})
+        );
     }
 
     /// Ensure that if all the end values of the JSON object are either `[]` or `{}` the flattened
