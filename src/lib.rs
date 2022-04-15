@@ -1,4 +1,4 @@
-//! Tiny Rust library for flattening JSON objects
+//! Robust Rust library for flattening JSON objects
 //!
 //! Given a JSON object it produces another one with all the nested objects and arrays flattened.
 //! The string used to separate the concatenated keys, and the way the arrays are
