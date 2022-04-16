@@ -238,15 +238,11 @@ impl Flattener {
         flattened: &mut Map<String, Value>,
     ) -> Result<(), error::Error> {
         for (i, obj) in current.iter().enumerate() {
-            let parent_key = if depth > 0 {
-                match self.array_formatting {
-                    ArrayFormatting::Plain => format!("{}{}{}", parent_key, self.key_separator, i),
-                    ArrayFormatting::Surrounded { ref start, ref end } => {
-                        format!("{}{}{}{}", parent_key, start, i, end)
-                    }
+            let parent_key = match self.array_formatting {
+                ArrayFormatting::Plain => format!("{}{}{}", parent_key, self.key_separator, i),
+                ArrayFormatting::Surrounded { ref start, ref end } => {
+                    format!("{}{}{}{}", parent_key, start, i, end)
                 }
-            } else {
-                format!("{}", i)
             };
             self.flatten_value(obj, parent_key, depth + 1, flattened)?;
         }
