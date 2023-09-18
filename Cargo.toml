@@ -17,7 +17,7 @@ thiserror = "1.0.30"
 [dev-dependencies]
 anyhow = "1.0.56"
 log = "0.4.16"
-rstest = "0.17.0"
+rstest = "0.18.2"
 
 [[example]]
 name = "from_stdin"
